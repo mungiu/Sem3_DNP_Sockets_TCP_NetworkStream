@@ -1,6 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -28,19 +27,16 @@ namespace NetworkConnectLib
             TcpListener.Start();
 
             Console.WriteLine("Waiting for someone to connect ...");
-            Task.Run(() => getTCPNetworkStreamAsync()).Wait();
+            getTCPNetworkStreamAsync();
             Console.WriteLine("Network stream etablished...");
+
+            Task.Run(() => WriteNetworkStreamAsync("Server is Online, this is first test message"));
             Task.Run(() => ReadNetworkStreamAsync());
 
             Console.WriteLine("TCP listen started...");
         }
 
-        public IPAddress getIpOfDomain(string domainName)
-        {
-            return new IPAddress(long.Parse(Dns.GetHostAddresses("google.com").ToString()));
-        }
-
-        public async Task getTCPNetworkStreamAsync()
+        public void getTCPNetworkStreamAsync()
         {
             ///An await expression does not block the thread on which it is executing. 
             ///Instead, it causes the compiler to sign up the rest of the async method 
@@ -55,7 +51,7 @@ namespace NetworkConnectLib
             ///expression, or anonymous method, an await expression cannot occur in the 
             ///body of a synchronous function, in a query expression, in the block of a 
             ///lock statement, or in an unsafe context.
-            TcpClient tcpClient = await TcpListener.AcceptTcpClientAsync();
+            TcpClient = TcpListener.AcceptTcpClient();
 
             NetworkStream = TcpClient.GetStream();
             Console.WriteLine("TCP connection established and NetworkStream found");
@@ -68,9 +64,6 @@ namespace NetworkConnectLib
         /// <returns></returns>
         public async Task WriteNetworkStreamAsync(string message)
         {
-            if (NetworkStream == null)
-                await getTCPNetworkStreamAsync();
-
             writeBuffer = new byte[1024];
             writeBuffer = Encoding.ASCII.GetBytes(message);
             await NetworkStream.WriteAsync(writeBuffer, 0, writeBuffer.Length);
@@ -80,14 +73,15 @@ namespace NetworkConnectLib
         {
             while (true)
             {
-                if (NetworkStream == null)
-                    await getTCPNetworkStreamAsync();
-
                 if (NetworkStream.DataAvailable)
                 {
                     readBuffer = new byte[1024];
-                    int byteCount = await NetworkStream.ReadAsync(readBuffer, 0, readBuffer.Length);
-                    Console.WriteLine($"Received: {Encoding.ASCII.GetString(readBuffer, 0, byteCount)}");
+                    try
+                    {
+                        int byteCount = await NetworkStream.ReadAsync(readBuffer, 0, readBuffer.Length);
+                        Console.WriteLine($"Received: {Encoding.ASCII.GetString(readBuffer, 0, byteCount)}");
+                    }
+                    catch (IOException e) { break; }
                 }
 
             }

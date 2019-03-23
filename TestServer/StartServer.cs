@@ -12,17 +12,13 @@ namespace TestServer
     {
         private static NetworkConnectLib.Server serverLib;
         private static IPAddress localIP;
-        private static int port = 5015;
+        private static int port = 5538;
 
         static void Main(string[] args)
         {
             Console.WriteLine("Starting server...");
             localIP = GetLocalIPAddress();
             serverLib = new NetworkConnectLib.Server(localIP, port);
-
-            //Console.WriteLine("Waiting for someone t oconnect ...");
-            //Task.Run(() => serverLib.getTCPNetworkStreamAsync()).Wait();
-            
 
             Console.WriteLine("Input message to send...");
             while (true)

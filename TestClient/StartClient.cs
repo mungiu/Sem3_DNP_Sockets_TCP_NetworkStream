@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
-using System.Text;
+using System.Net.Sockets;
 using System.Threading.Tasks;
 
 namespace TestClient
@@ -10,13 +8,31 @@ namespace TestClient
     class StartClient
     {
         private static NetworkConnectLib.Client clientLib;
-        private static string serverIP;
-        private static int port = 5015;
+        private static string serverIP = "169.254.84.153";
+        private static int port = 5538;
+        private static string sendMessage;
 
         static void Main(string[] args)
         {
             Console.WriteLine("Starting client...");
-            serverIP = "192.254.84.153";
+            clientLib = new NetworkConnectLib.Client(serverIP, port);
+
+            while (true)
+            {
+                sendMessage = Console.ReadLine();
+                Task.Run(() => clientLib.WriteNetworkStreamAsync(sendMessage));
+            }
+        }
+
+        public static IPAddress GetLocalIPAddress()
+        {
+            IPHostEntry host = Dns.GetHostEntry(Dns.GetHostName());
+
+            foreach (var ip in host.AddressList)
+                if (ip.AddressFamily == AddressFamily.InterNetwork)
+                    return ip;
+
+            throw new Exception("No network adapters with an IPv4 address in the system!");
         }
     }
 }

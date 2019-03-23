@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
+using System.IO;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
@@ -10,52 +8,54 @@ namespace NetworkConnectLib
 {
     public class Client
     {
-        NetworkStream networkStream;
+        public NetworkStream NetworkStream { get; set; }
         TcpClient client;
+        byte[] readBuffer = new byte[1024];
+        string stringData;
 
-        public Client()
+        public Client(string serverIp, int port)
         {
             try
             {
                 client = new TcpClient(serverIp, port);
             }
-            catch (SocketException)
+            catch (SocketException e)
             {
-                Console.WriteLine("Unable to connect to server");
+                Console.WriteLine(e.ToString());
                 return;
             }
 
-            networkStream = client.GetStream();
+            /// NOTE: We do not need to use "TcpClient client = newsock.AcceptTcpClient();"
+            /// as we do on on the server
+            NetworkStream = client.GetStream();
+            Console.WriteLine("Connected to server");
+            Console.WriteLine("Type a message: ");
+
+            // TODO
+            Task.Run(() => ReadNetworkStreamAsync());
         }
 
-        public void Start(string serverIp, int port)
+        public async Task ReadNetworkStreamAsync()
         {
-            byte[] data = new byte[1024];
-            string message, stringData;
-
-            Console.WriteLine("Connected to server");
-
             while (true)
             {
-                message = Console.ReadLine();
-                Task.Run(() => WriteNetworkStreamAsync(message));
-
-                data = new byte[1024];
-                int recv = networkStream.Read(data, 0, data.Length);
-                stringData = Encoding.ASCII.GetString(data, 0, recv);
-                Console.WriteLine(stringData);
+                if (NetworkStream.DataAvailable)
+                {
+                    readBuffer = new byte[1024];
+                    try
+                    {
+                        int recv = await NetworkStream.ReadAsync(readBuffer, 0, readBuffer.Length);
+                        stringData = Encoding.ASCII.GetString(readBuffer, 0, recv);
+                    }
+                    catch (IOException e) { break; }
+                }
             }
-        }
-
-        public async void ReadNetworkStreamAsync()
-        {
-
         }
 
         public async void WriteNetworkStreamAsync(string message)
         {
-            await networkStream.WriteAsync(Encoding.ASCII.GetBytes(message), 0, message.Length);
-            networkStream.Flush();
+            await NetworkStream.WriteAsync(Encoding.ASCII.GetBytes(message), 0, message.Length);
+            NetworkStream.Flush();
         }
     }
 }
